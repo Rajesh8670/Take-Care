@@ -1,14 +1,14 @@
 {
   "name": "takecare-root",
-  "version": "1.0.0",
+  "version": "1.-",
   "private": true,
   "scripts": {
-    "build": "npm run build --prefix Frontend/takecare-frontend",
-    "install": "npm install --prefix Backend && npm install --prefix Frontend/takecare-frontend",
+    "build": "npm run build --prefix Frontend",
+    "install": "npm install --prefix Backend && npm install --prefix Frontend",
     "start": "npm start --prefix Backend"
   },
   "workspaces": [
     "Backend",
-    "Frontend/takecare-frontend"
+    "Frontend"
   ]
 }
