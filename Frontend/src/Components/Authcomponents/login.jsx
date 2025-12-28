@@ -2,6 +2,7 @@ import React, { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../store/AuthContext";
 import ErrorMessage from "./error";
+import { Home } from "lucide-react";
 
 const Login = () => {
   const { logIn } = useContext(AuthContext);
@@ -37,6 +38,10 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center
       bg-gradient-to-br from-[#E0F7FA] via-[#B2EBF2] to-[#80DEEA] p-4 relative overflow-hidden">
+
+      <Link to="/" className="absolute top-8 left-8 z-20 text-teal-800 hover:text-teal-600 transition-colors" aria-label="Go to Homepage">
+        <Home size={32} />
+      </Link>
 
       {/* Floating soft circles */}
       <div className="absolute -top-32 -left-32 w-80 h-80 bg-white/20 rounded-full blur-3xl animate-pulseSlow"></div>
