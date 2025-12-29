@@ -37,7 +37,7 @@ const getOtp = async (req, res) => {
     };
     
     const mailOptions = {
-      from: "TakeCare <no-reply@TakeCare.com>",
+      from: process.env.EMAIL_FROM || "TakeCare <noreply@takecare.com>",
       to: email,
       subject: "Your TakeCare OTP",
       html: `
@@ -49,13 +49,25 @@ const getOtp = async (req, res) => {
       `
     };
 
-    await transporter.sendMail(mailOptions);
-    console.log("Email sent successfully to:", email);
-    
- res.status(201).json({
-  message: "OTP sent successfully",
-  email
-});
+    try {
+      await transporter.sendMail(mailOptions);
+      console.log("Email sent successfully to:", email);
+      
+      res.status(201).json({
+        message: "OTP sent successfully",
+        email
+      });
+    } catch (emailError) {
+      console.error("Failed to send email:", emailError.message);
+      console.error("Email error code:", emailError.code);
+      
+      // Store OTP was successful, but email failed - inform user
+      res.status(207).json({
+        message: "OTP generated but email delivery failed. Please check your email settings.",
+        debug: emailError.message,
+        email
+      });
+    }
 
 
   } catch (error) {
