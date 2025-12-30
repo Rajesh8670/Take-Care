@@ -1,31 +1,32 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 require("dotenv").config();
 
-const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || "smtp.gmail.com",
-    port: process.env.EMAIL_PORT || 587,
-    secure: process.env.EMAIL_SECURE === "true" || false, // use TLS instead of SSL for better compatibility
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
-    },
-    connectionTimeout: 10000, // 10 seconds
-    socketTimeout: 10000, // 10 seconds
-    pool: {
-        maxConnections: 5,
-        maxMessages: 100,
-        rateDelta: 4000,
-        rateLimit: 14
-    }
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Verify connection configuration
-transporter.verify((error, success) => {
-    if (error) {
-        console.error("Email configuration error:", error);
-    } else {
-        console.log("Email transporter is ready");
+// Create a transporter-like object for backward compatibility
+const transporter = {
+    sendMail: async (mailOptions) => {
+        try {
+            const result = await resend.emails.send({
+                from: mailOptions.from || "TakeCare <onboarding@resend.dev>",
+                to: mailOptions.to,
+                subject: mailOptions.subject,
+                html: mailOptions.html
+            });
+            
+            if (result.error) {
+                throw new Error(result.error.message);
+            }
+            
+            console.log("Email sent successfully via Resend:", result.data.id);
+            return result;
+        } catch (error) {
+            console.error("Resend email error:", error);
+            throw error;
+        }
     }
-});
+};
+
+console.log("Email service initialized with Resend");
 
 module.exports = transporter;
