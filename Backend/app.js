@@ -52,10 +52,19 @@ app.use(session({
 
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-// app.use(express.static(path.join(rootDir, 'public')));
 
+// API routes MUST come before static files
 app.use('/api/takeCare', takeCareRoute);
 app.use('/api/takeCare', healthReportRoutes);
+
+// Serve frontend static files
+app.use(express.static(path.join(__dirname, '..', 'Frontend', 'dist')));
+
+// SPA fallback - For all other GET requests, send back the frontend's index.html file.
+// This must be LAST to handle React Router navigation
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'Frontend', 'dist', 'index.html'));
+});
 
 
 mongoose.connect(DB_path).then(() => {
