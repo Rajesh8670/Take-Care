@@ -38,7 +38,7 @@ const getOtp = async (req, res) => {
     };
     
     const mailOptions = {
-      from: "noreply@resend.dev",
+      from: process.env.FROM_EMAIL || "noreply@resend.dev",
       to: email,
       subject: "Your TakeCare OTP",
       html: otpTemplate(otp)
