@@ -4,8 +4,8 @@
   "description": "TakeCare application",
   "main": "Backend/app.js",
   "scripts": {
-    "build": "cd Frontend && npm install && npm run build && cd ../Backend && npm install",
-    "start": "node Backend/app.js"
+    "build": "npm --prefix Frontend install && npm --prefix Frontend run build && npm --prefix Backend install",
+    "start": "npm --prefix Backend start"
   },
   "keywords": [],
   "author": "",
