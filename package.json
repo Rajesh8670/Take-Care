@@ -1,8 +1,13 @@
 {
-  "name": "takecare-root",
-  "private": true,
+  "name": "takecare",
+  "version": "1.0.0",
+  "description": "TakeCare application",
+  "main": "Backend/app.js",
   "scripts": {
-    "build": "npm --prefix Frontend install && npm --prefix Frontend run build && npm --prefix Backend install",
-    "start": "npm --prefix Backend start"
-  }
+    "build": "cd Frontend && npm install && npm run build && cd ../Backend && npm install",
+    "start": "node Backend/app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
