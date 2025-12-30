@@ -1,3 +1,4 @@
+const otpTemplate = require("../utils/otpTemplate");
 const transporter = require("../utils/mail");
 const NewAccount = require("../model/createAccountModel");
 const bcrypt = require("bcrypt");
@@ -40,13 +41,7 @@ const getOtp = async (req, res) => {
       from: "noreply@resend.dev",
       to: email,
       subject: "Your TakeCare OTP",
-      html: `
-        <h3>Hello !!</h3>
-        <p>Your OTP is:</p>
-        <h1 style="color: #007bff; font-size: 32px; letter-spacing: 5px;">${otp}</h1>
-        <p>It expires in 5 minutes.</p>
-        <p>If you didn't request this, please ignore this email.</p>
-      `
+      html: otpTemplate(otp)
     };
 
     try {
