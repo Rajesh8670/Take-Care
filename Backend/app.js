@@ -9,6 +9,26 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const session = require('express-session');
 
+// Verify critical environment variables
+console.log("\n=== Environment Variables Check ===");
+const requiredEnvVars = ['RESEND_API_KEY', 'JWT_SECRET'];
+let envCheckPassed = true;
+
+requiredEnvVars.forEach(envVar => {
+  if (process.env[envVar]) {
+    console.log(`✅ ${envVar}: Set`);
+  } else {
+    console.error(`❌ ${envVar}: NOT SET - This is required!`);
+    envCheckPassed = false;
+  }
+});
+
+if (!envCheckPassed) {
+  console.error("\n⚠️  WARNING: Missing environment variables! The app may not work properly.");
+  console.error("Make sure these are set in Render Dashboard > Settings > Environment Variables");
+}
+console.log("====================================\n");
+
 // Local File
 // const rootDir = require('./utils/pathUtil');
 const takeCareRoute = require('./Routes/authRouter');
