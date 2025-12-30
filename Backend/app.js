@@ -62,7 +62,7 @@ app.use(express.static(path.join(__dirname, '..', 'Frontend', 'dist')));
 
 // SPA fallback - For all other GET requests, send back the frontend's index.html file.
 // This must be LAST to handle React Router navigation
-app.get('/*', (req, res) => {
+app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'Frontend', 'dist', 'index.html'));
 });
 
