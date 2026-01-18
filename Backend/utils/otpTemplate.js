@@ -51,6 +51,7 @@ const otpTemplate = (otp) => {
           color: #555;
         }
         .otp-container {
+          width: 100%;
           display: flex;
           flex-direction: column;
           justify-content: center;
@@ -58,7 +59,7 @@ const otpTemplate = (otp) => {
           margin: 30px 0;
         }
         .otp-input {
-          width: 200px;
+          width: 100%;
           padding: 15px 20px;
           font-size: 32px;
           font-weight: 600;
