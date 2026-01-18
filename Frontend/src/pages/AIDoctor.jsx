@@ -112,7 +112,10 @@ const AIDoctor = () => {
 
         {/* HEADER */}
         <header className="mb-8">
-          <div className="flex items-center gap-3">
+          <div
+            onClick={() => navigate("/")}
+            className="flex items-center gap-3 cursor-pointer"
+          >
             <div className="p-3 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-xl shadow">
               <Stethoscope className="text-white w-7 h-7" />
             </div>

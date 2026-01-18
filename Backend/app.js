@@ -11,7 +11,7 @@ const session = require('express-session');
 
 // Verify critical environment variables
 console.log("\n=== Environment Variables Check ===");
-const requiredEnvVars = ['RESEND_API_KEY', 'JWT_SECRET'];
+const requiredEnvVars = ['SMTP_EMAIL', 'SMTP_PASSWORD', 'JWT_SECRET'];
 let envCheckPassed = true;
 
 requiredEnvVars.forEach(envVar => {
@@ -32,8 +32,6 @@ console.log("====================================\n");
 // Local File
 // const rootDir = require('./utils/pathUtil');
 const takeCareRoute = require('./Routes/authRouter');
-
-
 const healthReportRoutes = require('./Routes/healthReportRoutes');
 
 

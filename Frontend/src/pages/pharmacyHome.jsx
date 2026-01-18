@@ -482,7 +482,7 @@ const PharmacyHome = () => {
                 <span className="font-medium">Home</span>
               </button>
               
-              <div className="hidden md:flex items-center gap-2">
+              <div className="hidden md:flex items-center gap-2 cursor-pointer" onClick={goToHome}>
                 <Pill className="w-8 h-8 text-teal-600" />
                 <div>
                   <h1 className="text-xl font-bold bg-gradient-to-r from-teal-600 to-blue-700 bg-clip-text text-transparent">MediStore</h1>

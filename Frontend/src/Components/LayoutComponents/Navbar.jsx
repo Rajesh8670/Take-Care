@@ -38,7 +38,7 @@ const Navbar = () => {
       "
     >
       {/* LOGO */}
-      <div className="flex items-center gap-1">
+      <Link to="/" className="flex items-center gap-1">
         <div className={`w-10 h-10 overflow-hidden rounded-lg ${style.appLogo}`}>
           <img
             src="/app-logo1.png"
@@ -51,7 +51,7 @@ const Navbar = () => {
         <h1 className="text-2xl font-semibold text-[#264653] tracking-tight">
           Take Care
         </h1>
-      </div>
+      </Link>
 
       {/* MENU */}
       {!isBelow450 && (

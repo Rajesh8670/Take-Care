@@ -51,6 +51,10 @@ const otpTemplate = (otp) => {
           color: #555;
         }
         .otp-container {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
           margin: 30px 0;
         }
         .otp-input {
@@ -107,8 +111,8 @@ const otpTemplate = (otp) => {
         <div class="content">
           <h2>Your Verification Code</h2>
           <p>Hi there! Please use the following One-Time Password (OTP) to complete your verification process. </p>
+          <p style="margin-bottom: 10px;">Click the code to select it, then copy.</p>
           <div class="otp-container">
-            <p style="margin-bottom: 10px;">Click the code to select it, then copy.</p>
             <div class="otp-input" tabindex="0">${otp}</div>
           </div>
           <p>This code is valid for 5 minutes. For your security, please do not share it with anyone.</p>
