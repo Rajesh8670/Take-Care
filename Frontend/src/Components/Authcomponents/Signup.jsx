@@ -21,7 +21,7 @@ const Signup = () => {
     if (res.status === 201) {
       navigate("/verify-otp", {
         replace: true,
-        state: { page: "signUp", email },
+        state: { page: "signUp", email: res.email || email.trim().toLowerCase() },
       });
     } else setErrorMessage(res.message);
 

@@ -7,6 +7,7 @@ const OtpVerification = () => {
   const [otp, setOtp] = useState(["", "", "", ""]);
   const [isLoading, setIsLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(30);
+  const [errorMessage, setErrorMessage] = useState("");
   const inputRefs = useRef([]);
   const navigate = useNavigate();
   const location = useLocation();
@@ -36,11 +37,24 @@ const OtpVerification = () => {
 
   const handleResendOtp = async () => {
     if (resendTimer > 0) return;
-    setSignupData({
+    if (!location.state?.email || !location.state?.page) {
+      setErrorMessage("Session expired. Please request a new OTP.");
+      return;
+    }
+
+    const res = await setSignupData({
       email: location.state.email,
       page: location.state.page,
     });
-    setResendTimer(30);
+
+    if (res.status === 201) {
+      setErrorMessage("");
+      setResendTimer(30);
+      setOtp(["", "", "", ""]);
+      inputRefs.current[0]?.focus();
+    } else {
+      setErrorMessage(res.message || "Failed to resend OTP");
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -49,6 +63,7 @@ const OtpVerification = () => {
     if (finalOtp.length < 4) return alert("Enter valid OTP");
 
     setIsLoading(true);
+    setErrorMessage("");
     try {
       const res = await verifyOtp(finalOtp);
       if (res?.isVerified) {
@@ -59,8 +74,9 @@ const OtpVerification = () => {
           { replace: true, state: { email: res.email } }
         );
       } else {
+        setErrorMessage(res?.message || "Invalid OTP");
         setOtp(["", "", "", ""]);
-        inputRefs.current[0].focus();
+        inputRefs.current[0]?.focus();
       }
     } finally {
       setIsLoading(false);
@@ -92,6 +108,10 @@ const OtpVerification = () => {
             <p className="text-sm sm:text-base text-gray-700 mt-2">
               {location.state.email}
             </p>
+          )}
+
+          {errorMessage && (
+            <p className="mt-3 text-sm font-medium text-red-600">{errorMessage}</p>
           )}
         </div>
 

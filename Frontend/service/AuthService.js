@@ -12,9 +12,10 @@ export const getOtpFromServer = async ({email,page}) => {
 
          const status = response.status;
         const data = await response.json();
-        console.log("request sent with:", data);
+       console.log("request sent with:", data);
        return {
   status,
+  email: data.email || "",
   message: mapServerOtpResponse(data).message,
 };
     } catch (error) {

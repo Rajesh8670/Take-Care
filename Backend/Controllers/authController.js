@@ -6,65 +6,92 @@ const jwt = require("jsonwebtoken");
 
 // Simple in-memory storage for OTPs (use Redis/DB in production)
 const otpStore = {};
+const verifiedOtpStore = {};
+
+const OTP_EXPIRY_MS = 5 * 60 * 1000;
+
+const normalizeEmail = (email = "") => email.trim().toLowerCase();
+
+const markOtpVerified = (email) => {
+  verifiedOtpStore[email] = {
+    verifiedAt: Date.now(),
+    expiresAt: Date.now() + OTP_EXPIRY_MS,
+  };
+};
+
+const hasVerifiedOtp = (email) => {
+  const verifiedOtp = verifiedOtpStore[email];
+
+  if (!verifiedOtp) {
+    return false;
+  }
+
+  if (Date.now() > verifiedOtp.expiresAt) {
+    delete verifiedOtpStore[email];
+    return false;
+  }
+
+  return true;
+};
 
 const getOtp = async (req, res) => {
   try {
     console.log("Request Body:", req.body);
-    const { email,page } = req.body;
+    const { email, page } = req.body;
+    const normalizedEmail = normalizeEmail(email);
 
     // Validate email
-    if (!email) {
+    if (!normalizedEmail) {
       return res.status(400).json({ message: "Email is required" });
     }
 
-        // Check if email already exists
-    const exists = await NewAccount.findOne({ email });
-    if (exists && page==="signUp") {
+    // Check if email already exists
+    const exists = await NewAccount.findOne({ email: normalizedEmail });
+    if (exists && page === "signUp") {
       return res.status(409).json({ message: "Email already registered" });
     }
-    if (!exists && page==="resetPassword") {
+
+    if (!exists && page === "resetPassword") {
       return res.status(409).json({ message: "Email is not registered !! \nplease sign up first" });
     }
 
     // Generate 4-digit OTP
     const otp = Math.floor(1000 + Math.random() * 9000);
-    console.log("Generated OTP:", otp, "for email:", email);
-    
-    // Store OTP with email (expires in 5 minutes)
-    otpStore[email] = {
-      otp: otp,
-      createdAt: Date.now(),
-      expiresAt: Date.now() + 5 * 60 * 1000
-    };
-    
+    console.log("Generated OTP:", otp, "for email:", normalizedEmail);
+
     const mailOptions = {
-      from: process.env.FROM_EMAIL || "noreply@resend.dev",
-      to: email,
+      from: process.env.FROM_EMAIL || process.env.SMTP_EMAIL,
+      to: normalizedEmail,
       subject: "Your TakeCare OTP",
-      html: otpTemplate(otp)
+      html: otpTemplate(otp),
     };
 
     try {
       await transporter.sendMail(mailOptions);
-      console.log("Email sent successfully to:", email);
-      
+
+      otpStore[normalizedEmail] = {
+        otp,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + OTP_EXPIRY_MS,
+      };
+      delete verifiedOtpStore[normalizedEmail];
+
+      console.log("Email sent successfully to:", normalizedEmail);
+
       res.status(201).json({
         message: "OTP sent successfully",
-        email
+        email: normalizedEmail,
       });
     } catch (emailError) {
       console.error("Failed to send email:", emailError.message);
       console.error("Email error code:", emailError.code);
-      
-      // Store OTP was successful, but email failed - inform user
-      res.status(207).json({
-        message: "OTP generated but email delivery failed. Please try again later.",
+
+      res.status(500).json({
+        message: "OTP email delivery failed. Please try again later.",
         debug: emailError.message,
-        email
+        email: normalizedEmail,
       });
     }
-
-
   } catch (error) {
     console.error("Email Error:", error);
     res.status(500).json({ message: "Failed to send OTP", error: error.message });
@@ -74,61 +101,61 @@ const getOtp = async (req, res) => {
 const checkOtp = (req, res) => {
   try {
     const { userOtp, email } = req.body;
-    console.log("Check OTP request:", { userOtp, email });
+    const normalizedEmail = normalizeEmail(email);
+    console.log("Check OTP request:", { userOtp, email: normalizedEmail });
 
     // Validate inputs
-    if (!userOtp || !email) {
-      return res.status(400).json({ 
+    if (!userOtp || !normalizedEmail) {
+      return res.status(400).json({
         message: "userOtp and email are required",
-        isVerified: false 
+        isVerified: false,
       });
     }
 
     // Check if OTP exists for this email
-    if (!otpStore[email]) {
-      return res.json({ 
+    if (!otpStore[normalizedEmail]) {
+      return res.status(404).json({
         message: "OTP expired or not found. Please request a new OTP.",
-        isVerified: false 
+        isVerified: false,
       });
     }
 
-    const storedOtp = otpStore[email];
+    const storedOtp = otpStore[normalizedEmail];
 
     // Check if OTP expired
     if (Date.now() > storedOtp.expiresAt) {
-      delete otpStore[email];
-      return res.json({ 
+      delete otpStore[normalizedEmail];
+      return res.status(410).json({
         message: "OTP expired. Please request a new OTP.",
-        isVerified: false 
+        isVerified: false,
       });
     }
 
     // Verify OTP
     if (parseInt(userOtp) === storedOtp.otp) {
-      console.log("OTP verified successfully for:", email);
-      delete otpStore[email]; // Clear OTP after verification
-
-    
+      console.log("OTP verified successfully for:", normalizedEmail);
+      delete otpStore[normalizedEmail];
+      markOtpVerified(normalizedEmail);
 
       res.json({
         message: "OTP verified successfully",
         isVerified: true,
-        email: email,
-        session: { isVerified: true }
+        email: normalizedEmail,
+        session: { isVerified: true },
       });
     } else {
-      console.log("Invalid OTP attempt for:", email);
-      res.json({
+      console.log("Invalid OTP attempt for:", normalizedEmail);
+      res.status(401).json({
         message: "Invalid OTP",
-        isVerified: false
+        isVerified: false,
       });
     }
   } catch (error) {
     console.error("OTP Check Error:", error);
-    res.status(500).json({ 
-      message: "Error verifying OTP", 
+    res.status(500).json({
+      message: "Error verifying OTP",
       error: error.message,
-      isVerified: false 
+      isVerified: false,
     });
   }
 };
@@ -137,14 +164,19 @@ const checkOtp = (req, res) => {
 const createAccount = async (req, res) => {
   try {
     const { fullname, email, password } = req.body;
+    const normalizedEmail = normalizeEmail(email);
 
     // Validate
-    if (!fullname || !email || !password) {
+    if (!fullname || !normalizedEmail || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
+    if (!hasVerifiedOtp(normalizedEmail)) {
+      return res.status(403).json({ message: "Please verify OTP before creating your account" });
+    }
+
     // Check existing user
-    const exists = await NewAccount.findOne({ email });
+    const exists = await NewAccount.findOne({ email: normalizedEmail });
     if (exists) {
       return res.status(409).json({ message: "Email already registered" });
     }
@@ -155,12 +187,13 @@ const createAccount = async (req, res) => {
     // Create user with hashed password
     const newUser = new NewAccount({
       fullname,
-      email,
+      email: normalizedEmail,
       password: hashedPassword,
       isLogin:false,
     });
 
     await newUser.save();
+    delete verifiedOtpStore[normalizedEmail];
 
     res.status(201).json({ message: "Account created successfully" });
 
@@ -219,14 +252,24 @@ const login = async (req, res) => {
 
 const resetPassword=async(req,res)=>{
 const {email,password}=req.body;
+const normalizedEmail = normalizeEmail(email);
   try{
-  const user=await NewAccount.findOne({email});
+  if (!normalizedEmail || !password) {
+    return res.status(400).json({ message: "Email and password are required" });
+  }
+
+  if (!hasVerifiedOtp(normalizedEmail)) {
+    return res.status(403).json({ message: "Please verify OTP before resetting your password" });
+  }
+
+  const user=await NewAccount.findOne({email: normalizedEmail});
   if (!user){
     return  res.status(404).json({message:"User not found"});
     }
     const hashedPassword = await bcrypt.hash(password, 10);
   user.password=hashedPassword;
   await user.save();
+  delete verifiedOtpStore[normalizedEmail];
   return res.status(201).json({message:"Password Reset Success fully"});
     }catch(error){
       console.log("error in account create ",error);

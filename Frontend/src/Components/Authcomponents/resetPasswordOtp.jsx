@@ -23,6 +23,7 @@ export default function PasswordResetEmail() {
         replace: true,
         state: {
           page: "resetPassword",
+          email: res.email || email.trim().toLowerCase(),
         },
       });
     } else {

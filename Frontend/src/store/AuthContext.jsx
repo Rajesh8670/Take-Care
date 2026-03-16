@@ -63,8 +63,16 @@ const AuthContextProvider = ({ children }) => {
   }, [state.isLogin, state.token, state.user]);
 
   const setSignupData = async (data) => {
-    const res = await getOtpFromServer(data);
-    dispatch({ type: "SET_SIGNUP_DATA", payload: data });
+    const normalizedData = {
+      ...data,
+      email: data.email?.trim().toLowerCase() || "",
+    };
+    const res = await getOtpFromServer(normalizedData);
+
+    if (res.status === 201) {
+      dispatch({ type: "SET_SIGNUP_DATA", payload: normalizedData });
+    }
+
     return res;
   };
 
