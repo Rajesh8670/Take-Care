@@ -2,6 +2,7 @@ import { useState, useEffect, useContext, useRef } from "react";
 import { Upload, FileText, Brain, Loader2, ChevronDown, ChevronUp, Shield, BarChart, Heart, Home, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../store/AuthContext";
+import { getPrediction } from "../service/aiService";
 
 const HealthReports = () => {
   const [reports, setReports] = useState([]);
@@ -9,7 +10,11 @@ const HealthReports = () => {
   const [expandedReport, setExpandedReport] = useState(null); // For the details section within a card
   const navigate = useNavigate();
   const { token, logout } = useContext(AuthContext);
-  const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  const BASE_URL =
+    (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000").replace(
+      /\/+$/,
+      ""
+    );
 
   const activeCardRef = useRef(null);
   const analysisResultRef = useRef(null);
@@ -74,6 +79,95 @@ const HealthReports = () => {
     fetchReports();
   }, [token, logout, navigate]);
 
+  const formatAiResultForReport = (result, fileType) => {
+    const isImageReport = fileType?.startsWith("image/");
+
+    if (!isImageReport) {
+      return {
+        summary:
+          "This report was uploaded successfully, but the connected AI model currently analyzes only image files.",
+        condition:
+          "AI image analysis is available for JPG, JPEG, PNG, and WebP files.",
+        recommendations: [
+          "Upload a clear image version of the report if available",
+          "Use JPG or PNG for AI-assisted screening",
+          "Open the uploaded file manually for full document review",
+        ],
+        confidence: "N/A",
+        insights: [
+          `Uploaded format: ${fileType || "Unknown"}`,
+          "No AI image prediction was run for this file type",
+        ],
+      };
+    }
+
+    return {
+      summary: result.data.advice,
+      condition: `${result.data.prediction}`,
+      recommendations:
+        result.data.medicines?.length > 0
+          ? result.data.medicines
+          : ["No specific medicine or management recommendation provided"],
+      confidence: `${result.data.confidence_percentage}%`,
+      insights: [
+        `Detected condition: ${result.data.prediction}`,
+        `Model confidence: ${result.data.confidence_percentage}%`,
+        result.data.disclaimer,
+      ],
+    };
+  };
+
+  const runAiAnalysisForReport = async (reportId, file, fileType) => {
+    setReports((prev) =>
+      prev.map((report) =>
+        report._id === reportId ? { ...report, analyzing: true } : report
+      )
+    );
+
+    try {
+      const result = fileType?.startsWith("image/")
+        ? await getPrediction(file)
+        : { success: true, data: null };
+
+      setReports((prev) =>
+        prev.map((report) =>
+          report._id === reportId
+            ? {
+                ...report,
+                analyzing: false,
+                result: formatAiResultForReport(result, fileType),
+              }
+            : report
+        )
+      );
+    } catch (error) {
+      setReports((prev) =>
+        prev.map((report) =>
+          report._id === reportId
+            ? {
+                ...report,
+                analyzing: false,
+                result: {
+                  summary: "AI analysis could not be completed.",
+                  condition: error.message || "Unknown error",
+                  recommendations: [
+                    "Try uploading the file again",
+                    "Use a supported image format such as JPG or PNG",
+                    "Check that the backend AI service is running",
+                  ],
+                  confidence: "N/A",
+                  insights: [
+                    `File type: ${fileType || "Unknown"}`,
+                    "The upload itself was saved, but AI processing failed",
+                  ],
+                },
+              }
+            : report
+        )
+      );
+    }
+  };
+
   const handleUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -92,8 +186,14 @@ const HealthReports = () => {
 
       if (response.ok) {
         const newReport = await response.json();
-        setReports((prev) => [newReport.report, ...prev]);
+        const pendingReport = {
+          ...newReport.report,
+          analyzing: true,
+        };
+        setReports((prev) => [pendingReport, ...prev]);
         setActiveReport(newReport.report._id); // Auto-focus the new upload
+        setExpandedReport(newReport.report._id);
+        await runAiAnalysisForReport(newReport.report._id, file, file.type);
       } else if (response.status === 401) {
         logout();
         navigate('/login');
@@ -109,44 +209,29 @@ const HealthReports = () => {
     setReports((prev) =>
       prev.map((report) =>
         report._id === id
-          ? { ...report, analyzing: true }
+          ? {
+              ...report,
+              analyzing: false,
+              result: {
+                summary:
+                  "AI analysis runs automatically right after upload for supported image reports.",
+                condition:
+                  "Re-analysis from stored reports is not available because the model needs the original uploaded image file.",
+                recommendations: [
+                  "Upload the report image again to refresh AI analysis",
+                  "Use JPG, JPEG, PNG, or WebP images for AI support",
+                  "Keep the current uploaded report for record storage",
+                ],
+                confidence: "N/A",
+                insights: [
+                  "Current AI integration uses the image file at upload time",
+                  "Saved report records remain unchanged in the UI",
+                ],
+              },
+            }
           : report
       )
     );
-
-    setTimeout(() => {
-      setReports((prev) =>
-        prev.map((report) =>
-          report._id === id
-            ? {
-                ...report,
-                analyzing: false,
-                result: {
-                  summary:
-                    "Mild vitamin D deficiency detected with slightly elevated cholesterol levels. Overall health assessment shows good cardiovascular health markers.",
-                  condition:
-                    "No critical abnormalities found. Preventive care advised for maintaining optimal health levels.",
-                  recommendations: [
-                    "Increase sunlight exposure (15-20 minutes daily)",
-                    "Balanced low-fat diet with omega-3 fatty acids",
-                    "Regular exercise (30 minutes, 5 times a week)",
-                    "Follow-up test after 3 months",
-                    "Consider Vitamin D supplements (consult doctor)",
-                    "Monitor cholesterol levels quarterly"
-                  ],
-                  confidence: "92%",
-                  insights: [
-                    "Vitamin D levels: 18 ng/mL (below optimal)",
-                    "Cholesterol: 210 mg/dL (borderline high)",
-                    "Blood Pressure: Normal range",
-                    "Glucose Levels: Within normal limits"
-                  ]
-                },
-              }
-            : report
-        )
-      );
-    }, 2500);
   };
 
   const handleDeleteReport = async (reportId) => {

@@ -11,6 +11,14 @@ const OtpVerification = () => {
   const inputRefs = useRef([]);
   const navigate = useNavigate();
   const location = useLocation();
+  const fallbackEmail =
+    location.state?.email ||
+    JSON.parse(sessionStorage.getItem("pendingSignupData") || "{}")?.email ||
+    "";
+  const fallbackPage =
+    location.state?.page ||
+    JSON.parse(sessionStorage.getItem("pendingSignupData") || "{}")?.page ||
+    "";
 
   React.useEffect(() => {
     if (resendTimer > 0) {
@@ -18,6 +26,12 @@ const OtpVerification = () => {
       return () => clearTimeout(timer);
     }
   }, [resendTimer]);
+
+  React.useEffect(() => {
+    if (!fallbackEmail || !fallbackPage) {
+      setErrorMessage("Session expired. Please request a new OTP.");
+    }
+  }, [fallbackEmail, fallbackPage]);
 
   const handleChange = (value, index) => {
     if (isNaN(value)) return;
@@ -37,14 +51,14 @@ const OtpVerification = () => {
 
   const handleResendOtp = async () => {
     if (resendTimer > 0) return;
-    if (!location.state?.email || !location.state?.page) {
+    if (!fallbackEmail || !fallbackPage) {
       setErrorMessage("Session expired. Please request a new OTP.");
       return;
     }
 
     const res = await setSignupData({
-      email: location.state.email,
-      page: location.state.page,
+      email: fallbackEmail,
+      page: fallbackPage,
     });
 
     if (res.status === 201) {
@@ -68,7 +82,7 @@ const OtpVerification = () => {
       const res = await verifyOtp(finalOtp);
       if (res?.isVerified) {
         navigate(
-          location.state.page === "signUp"
+          fallbackPage === "signUp"
             ? "/create-account"
             : "/reset-Password",
           { replace: true, state: { email: res.email } }
@@ -104,9 +118,9 @@ const OtpVerification = () => {
             Enter Verification Code
           </h1>
 
-          {location.state?.email && (
+          {fallbackEmail && (
             <p className="text-sm sm:text-base text-gray-700 mt-2">
-              {location.state.email}
+              {fallbackEmail}
             </p>
           )}
 

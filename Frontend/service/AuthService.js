@@ -1,4 +1,6 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"
+).replace(/\/+$/, "");
 
 export const getOtpFromServer = async ({email,page}) => {
     try {
@@ -12,15 +14,14 @@ export const getOtpFromServer = async ({email,page}) => {
 
          const status = response.status;
         const data = await response.json();
-       console.log("request sent with:", data);
-       return {
+        return {
   status,
   email: data.email || "",
   message: mapServerOtpResponse(data).message,
 };
     } catch (error) {
         console.error("Error fetching OTP:", error);
-        throw error;
+        throw new Error("Cannot reach backend server. Check that frontend and backend are using the same local API URL.");
     }
 };
 
@@ -38,7 +39,7 @@ export const checkOtpWithServer = async ({ userOtp, email }) => {
         return mapServerOtpResponse(data);
     } catch (error) {
         console.error("Error checking OTP:", error);
-        throw error;
+        throw new Error("Cannot verify OTP because the backend server is not reachable.");
     }
 };
 
@@ -51,16 +52,13 @@ export const CreateAccountInServer = async (data) => {
       },
       body: JSON.stringify(data),
     });
-
-    console.log("request sent with:", data);
     const status = response.status;
     const resData = await response.json();
-    console.log("Response status:", status, "Data:", resData);
 
     return { status, message: resData.message, data: resData };
   } catch (error) {
     console.error("Error creating account:", error);
-    throw error;
+    throw new Error("Cannot create account because the backend server is not reachable.");
   }
 };
 
@@ -74,7 +72,6 @@ export const loginToServer = async ({ email, password }) => {
 
     const status = response.status;
     const data = await response.json();
-    console.log(data);
     return {
       status,
       message: data.message,
@@ -85,7 +82,7 @@ export const loginToServer = async ({ email, password }) => {
 
   } catch (error) {
     console.error("Error in login:", error);
-    return { status: 500, message: "Server error" };
+    return { status: 500, message: "Cannot reach backend server" };
   }
 };
 
@@ -101,14 +98,13 @@ export const resetPassword = async ({email,password}) => {
 
          const status = response.status;
         const data = await response.json();
-        console.log("request sent with:", data);
        return {
   status,
   message:data.message,
 };
     } catch (error) {
         console.error("Error fetching OTP:", error);
-        throw error;
+        throw new Error("Cannot reset password because the backend server is not reachable.");
     }
 };
 

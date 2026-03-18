@@ -22,7 +22,7 @@ export const AuthContext = createContext({
 });
 
 const initialState = {
-  signupData: {},
+  signupData: JSON.parse(sessionStorage.getItem("pendingSignupData") || "{}"),
   isLogin: !!localStorage.getItem("token"),
   user: JSON.parse(localStorage.getItem("user")) || null,
   token: localStorage.getItem("token") || null,
@@ -62,6 +62,14 @@ const AuthContextProvider = ({ children }) => {
     }
   }, [state.isLogin, state.token, state.user]);
 
+  useEffect(() => {
+    if (state.signupData?.email) {
+      sessionStorage.setItem("pendingSignupData", JSON.stringify(state.signupData));
+    } else {
+      sessionStorage.removeItem("pendingSignupData");
+    }
+  }, [state.signupData]);
+
   const setSignupData = async (data) => {
     const normalizedData = {
       ...data,
@@ -70,7 +78,10 @@ const AuthContextProvider = ({ children }) => {
     const res = await getOtpFromServer(normalizedData);
 
     if (res.status === 201) {
-      dispatch({ type: "SET_SIGNUP_DATA", payload: normalizedData });
+      dispatch({
+        type: "SET_SIGNUP_DATA",
+        payload: normalizedData,
+      });
     }
 
     return res;
@@ -83,6 +94,9 @@ const AuthContextProvider = ({ children }) => {
         return { isVerified: false, message: "Email not found. Please signup again." };
       }
       const res = await checkOtpWithServer({ userOtp, email });
+      if (res?.isVerified) {
+        sessionStorage.setItem("verifiedOtpEmail", email);
+      }
       return res;
     } catch (error) {
       return { isVerified: false, message: error.message };
@@ -121,6 +135,8 @@ const AuthContextProvider = ({ children }) => {
     const res = await resetPassword(data);
     if (res.status === 201) {
       dispatch({ type: "RESET_AUTH" });
+      sessionStorage.removeItem("pendingSignupData");
+      sessionStorage.removeItem("verifiedOtpEmail");
     }
     return res;
   };

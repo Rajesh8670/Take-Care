@@ -8,7 +8,10 @@ const CreateAccount = () => {
   const navigate = useNavigate();
   const { createAccount } = useContext(AuthContext);
 
-  const emailFromState = location.state?.email || "";
+  const emailFromState =
+    location.state?.email ||
+    sessionStorage.getItem("verifiedOtpEmail") ||
+    "";
 
   const [errorMessage, setErrorMessage] = useState("");
   const [formData, setFormData] = useState({
@@ -39,6 +42,7 @@ const CreateAccount = () => {
     try {
       const res = await createAccount(formData);
       if (res?.status === 201) {
+        sessionStorage.removeItem("verifiedOtpEmail");
         navigate("/login", { replace: true });
       } else {
         setErrorMessage(res?.message || "Account creation failed.");

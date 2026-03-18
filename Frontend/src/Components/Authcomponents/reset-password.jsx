@@ -12,6 +12,10 @@ export default function ResetPassword() {
   const navigate = useNavigate();
   const location = useLocation();
   const { resetAuth } = useContext(AuthContext);
+  const email =
+    location.state?.email ||
+    sessionStorage.getItem("verifiedOtpEmail") ||
+    "";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,15 +24,15 @@ export default function ResetPassword() {
       return;
     }
     const res = await resetAuth({
-      email: location.state.email,
+      email,
       password,
     });
 
     if (res.status === 201) {
+      sessionStorage.removeItem("verifiedOtpEmail");
       navigate("/");
     } else {
       setErrorMessage(res.message);
-      navigate("/");
     }
   };
 
