@@ -11,7 +11,7 @@ const session = require('express-session');
 
 // Verify critical environment variables
 console.log("\n=== Environment Variables Check ===");
-const requiredEnvVars = ['SMTP_EMAIL', 'SMTP_PASSWORD', 'JWT_SECRET'];
+const requiredEnvVars = ['BREVO_API_KEY', 'JWT_SECRET'];
 let envCheckPassed = true;
 
 requiredEnvVars.forEach(envVar => {

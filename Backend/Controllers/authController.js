@@ -1,5 +1,5 @@
 const otpTemplate = require("../utils/otpTemplate");
-const transporter = require("../utils/mail");
+const { sendMail } = require("../utils/mail");
 const NewAccount = require("../model/createAccountModel");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -60,15 +60,15 @@ const getOtp = async (req, res) => {
     console.log("Generated OTP:", otp, "for email:", normalizedEmail);
 
     const mailOptions = {
-      from: `TakeCare App <${process.env.FROM_EMAIL}>`,
+      from: process.env.FROM_EMAIL,
       to: normalizedEmail,
       subject: "Your TakeCare OTP",
       html: otpTemplate(otp),
     };
 
     try {
-      console.log("📧 Sending OTP email via Brevo SMTP...");
-      await transporter.sendMail(mailOptions);
+      console.log("📧 Sending OTP email via Brevo API...");
+      await sendMail(mailOptions);
 
       otpStore[normalizedEmail] = {
         otp,
@@ -86,7 +86,6 @@ const getOtp = async (req, res) => {
     } catch (emailError) {
       console.error("❌ Failed to send OTP email:", emailError.message);
       console.error("Error Code:", emailError.code);
-      console.error("SMTP Response:", emailError.response);
 
       res.status(500).json({
         message: "OTP email delivery failed. Please try again later.",
