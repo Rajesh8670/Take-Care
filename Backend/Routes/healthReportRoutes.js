@@ -19,30 +19,51 @@ router.post(
       const { userId } = req.user;
       const { filename, mimetype } = req.file;
 
+      console.log("📁 Upload Report Details:");
+      console.log("User ID:", userId);
+      console.log("File Object:", {
+        fieldname: req.file.fieldname,
+        originalname: req.file.originalname,
+        encoding: req.file.encoding,
+        mimetype: req.file.mimetype,
+        destination: req.file.destination,
+        filename: req.file.filename,
+        path: req.file.path,
+        size: req.file.size
+      });
+
       const userUploadsDir = path.join(__dirname, "..", "uploads", "reports", userId);
       if (!fs.existsSync(userUploadsDir)) {
         fs.mkdirSync(userUploadsDir, { recursive: true });
+        console.log("✓ Created user uploads directory:", userUploadsDir);
       }
 
-      const newFilePath = path.join(userUploadsDir, filename);
+      const newFilePath = path.join(userUploadsDir, req.file.filename);
+      console.log("📋 Moving file from:", req.file.path, "to:", newFilePath);
+      
       fs.renameSync(req.file.path, newFilePath);
+      console.log("✓ File moved successfully");
 
       const newReport = new HealthReport({
         userId,
-        fileName: filename,
+        fileName: req.file.originalname,
         fileType: mimetype,
-        fileUrl: `/uploads/reports/${userId}/${filename}`,
+        fileUrl: `/uploads/reports/${userId}/${req.file.filename}`,
       });
 
       await newReport.save();
+      console.log("✓ Report saved to database:", newReport._id);
 
       res.status(201).json({
         message: "Report uploaded successfully",
         report: newReport,
       });
     } catch (error) {
-      console.error("Error uploading report:", error);
-      res.status(500).json({ message: "Server error" });
+      console.error("❌ Error uploading report:", error);
+      res.status(500).json({ 
+        message: "Server error", 
+        error: error.message 
+      });
     }
   }
 );

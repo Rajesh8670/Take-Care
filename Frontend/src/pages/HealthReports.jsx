@@ -176,6 +176,8 @@ const HealthReports = () => {
     formData.append("report", file);
 
     try {
+      console.log("📤 Uploading file:", file.name, "Size:", file.size, "Type:", file.type);
+      
       const response = await fetch(`${BASE_URL}/api/takeCare/upload-report`, {
         method: "POST",
         headers: {
@@ -184,24 +186,31 @@ const HealthReports = () => {
         body: formData,
       });
 
+      const responseData = await response.json();
+      
       if (response.ok) {
-        const newReport = await response.json();
+        console.log("✓ File uploaded successfully");
+        const newReport = responseData.report;
         const pendingReport = {
-          ...newReport.report,
+          ...newReport,
           analyzing: true,
         };
         setReports((prev) => [pendingReport, ...prev]);
-        setActiveReport(newReport.report._id); // Auto-focus the new upload
-        setExpandedReport(newReport.report._id);
-        await runAiAnalysisForReport(newReport.report._id, file, file.type);
+        setActiveReport(newReport._id);
+        setExpandedReport(newReport._id);
+        await runAiAnalysisForReport(newReport._id, file, file.type);
       } else if (response.status === 401) {
+        console.error("❌ Unauthorized - token invalid");
         logout();
         navigate('/login');
       } else {
-        console.error("Error uploading report");
+        const errorMsg = responseData.error || responseData.message || "Unknown error";
+        console.error("❌ Error uploading report:", errorMsg);
+        alert(`Upload failed: ${errorMsg}`);
       }
     } catch (error) {
-      console.error("Error uploading report:", error);
+      console.error("❌ Network error uploading report:", error);
+      alert(`Network error: ${error.message}`);
     }
   };
 
