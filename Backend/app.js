@@ -38,7 +38,10 @@ const healthReportRoutes = require('./Routes/healthReportRoutes');
 const DB_path = "mongodb+srv://root:Rajesh9749@rajeshcoding.dzhwuty.mongodb.net/TakeCare?appName=RajeshCoding"
 
 const app = express();
-const allowedOrigins = (process.env.FRONTEND_URL || 'https://take-care-frontend.onrender.com')
+const allowedOrigins = (
+  process.env.FRONTEND_URL ||
+  'https://take-care-frontend.onrender.com,http://localhost:5173,http://127.0.0.1:5173'
+)
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);

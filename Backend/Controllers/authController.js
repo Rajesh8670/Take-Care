@@ -60,13 +60,14 @@ const getOtp = async (req, res) => {
     console.log("Generated OTP:", otp, "for email:", normalizedEmail);
 
     const mailOptions = {
-      from: process.env.FROM_EMAIL || process.env.SMTP_EMAIL,
+      from: `TakeCare App <${process.env.FROM_EMAIL}>`,
       to: normalizedEmail,
       subject: "Your TakeCare OTP",
       html: otpTemplate(otp),
     };
 
     try {
+      console.log("📧 Sending OTP email via Brevo SMTP...");
       await transporter.sendMail(mailOptions);
 
       otpStore[normalizedEmail] = {
@@ -76,15 +77,16 @@ const getOtp = async (req, res) => {
       };
       delete verifiedOtpStore[normalizedEmail];
 
-      console.log("Email sent successfully to:", normalizedEmail);
+      console.log("✅ OTP email sent successfully to:", normalizedEmail);
 
       res.status(201).json({
         message: "OTP sent successfully",
         email: normalizedEmail,
       });
     } catch (emailError) {
-      console.error("Failed to send email:", emailError.message);
-      console.error("Email error code:", emailError.code);
+      console.error("❌ Failed to send OTP email:", emailError.message);
+      console.error("Error Code:", emailError.code);
+      console.error("SMTP Response:", emailError.response);
 
       res.status(500).json({
         message: "OTP email delivery failed. Please try again later.",
