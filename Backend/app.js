@@ -73,6 +73,10 @@ app.use(
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
+app.get('/keepAlive',(req,res)=>{
+  res.status(200).end("I am Alive");
+});
+  
 app.use("/api/takeCare", takeCareRoute);
 app.use("/api/takeCare", healthReportRoutes);
 app.use("/api/ai", aiRoutes);
