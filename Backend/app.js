@@ -39,7 +39,7 @@ const healthReportRoutes = require("./Routes/healthReportRoutes");
 const aiRoutes = require("./Routes/aiRoutes");
 
 const DB_path =
-  "mongodb+srv://root:Rajesh9749@rajeshcoding.dzhwuty.mongodb.net/TakeCare?appName=RajeshCoding";
+  "mongodb+srv://root:12345676@rajeshcoding.dzhwuty.mongodb.net/TakeCare?appName=RajeshCoding";
 
 const app = express();
 const allowedOrigins = (
