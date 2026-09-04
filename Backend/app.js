@@ -34,6 +34,12 @@ if (!envCheckPassed) {
 }
 console.log("====================================\n");
 
+if (process.env.GEMINI_API_KEY) {
+  console.log("GEMINI_API_KEY: Set");
+} else {
+  console.warn("GEMINI_API_KEY: MISSING - AI image analysis will be unavailable");
+}
+
 const takeCareRoute = require("./Routes/authRouter");
 const healthReportRoutes = require("./Routes/healthReportRoutes");
 const aiRoutes = require("./Routes/aiRoutes");

@@ -1,10 +1,34 @@
 const axios = require("axios");
 const fs = require("fs/promises");
-const FormData = require("form-data");
 
-const PREDICTION_API =
-  process.env.AI_PREDICTION_API ||
-  "https://hawktherock-take-care-backend.hf.space/predict";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+const analysisSchema = {
+  type: "object",
+  properties: {
+    prediction: { type: "string" },
+    confidence: { type: "number" },
+    observedSigns: { type: "array", items: { type: "string" } },
+    advice: { type: "string" },
+    urgency: { type: "string" },
+    medicines: { type: "array", items: { type: "string" } },
+    medicineTiming: { type: "array", items: { type: "string" } },
+    whenToSeeDoctor: { type: "string" },
+    disclaimer: { type: "string" },
+  },
+  required: [
+    "prediction",
+    "confidence",
+    "observedSigns",
+    "advice",
+    "urgency",
+    "medicines",
+    "medicineTiming",
+    "whenToSeeDoctor",
+    "disclaimer",
+  ],
+};
 
 const removeUploadedFile = async (filePath) => {
   if (!filePath) {
@@ -29,51 +53,90 @@ const getPrediction = async (req, res) => {
       });
     }
 
-    console.log("Processing AI prediction for file:", req.file.filename);
-
-    const fileBuffer = await fs.readFile(filePath);
-    const form = new FormData();
-    form.append("file", fileBuffer, {
-      filename: req.file.originalname,
-      contentType: req.file.mimetype,
-    });
-
-    console.log("Forwarding image to AI prediction API...");
-    const response = await axios.post(PREDICTION_API, form, {
-      headers: form.getHeaders(),
-      timeout: 30000,
-      maxBodyLength: Infinity,
-    });
-
-    const predictionData = response.data || {};
-
-    if (
-      typeof predictionData.prediction === "undefined" ||
-      typeof predictionData.confidence === "undefined"
-    ) {
-      return res.status(502).json({
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(503).json({
         success: false,
-        message: "Prediction API returned an unexpected response",
+        message: "Gemini AI is not configured. Set GEMINI_API_KEY on the backend.",
       });
     }
+
+    const fileBuffer = await fs.readFile(filePath);
+    const response = await axios.post(
+      GEMINI_API_URL,
+      {
+        contents: [
+          {
+            parts: [
+              {
+                text: `Analyze this image for visible skin concerns. Return only valid JSON matching the provided schema.
+
+Rules:
+- If the image is not a clear skin image, set prediction to "Image not suitable for analysis" and explain that in advice.
+- This is educational triage, not a diagnosis. Never claim certainty.
+- Recommend only general, low-risk supportive care or clearly label over-the-counter options. Do not recommend prescription medicine or a personalized dose.
+- For every medicine or product, include practical timing or frequency in medicineTiming, and say to follow the product label or clinician instructions.
+- Mention urgent red flags such as breathing difficulty, facial swelling, rapidly spreading rash, severe pain, fever, pus, or eye involvement.
+- Confidence must be a number from 0 to 1.`,
+              },
+              {
+                inline_data: {
+                  mime_type: req.file.mimetype,
+                  data: fileBuffer.toString("base64"),
+                },
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.2,
+          responseMimeType: "application/json",
+          responseSchema: analysisSchema,
+        },
+      },
+      {
+        params: { key: process.env.GEMINI_API_KEY },
+        timeout: 60000,
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+      }
+    );
+
+    const responseText = response.data?.candidates?.[0]?.content?.parts
+      ?.map((part) => part.text || "")
+      .join("")
+      .trim();
+
+    if (!responseText) {
+      throw new Error("Gemini returned an empty analysis");
+    }
+
+    const predictionData = JSON.parse(responseText);
+    const confidence = Math.min(
+      1,
+      Math.max(0, Number(predictionData.confidence) || 0)
+    );
 
     return res.status(200).json({
       success: true,
       data: {
         prediction: predictionData.prediction,
-        confidence: predictionData.confidence,
-        confidence_percentage: (
-          Number(predictionData.confidence) * 100
-        ).toFixed(2),
-        advice:
-          predictionData.advice ||
-          "Keep the affected area clean and consult a dermatologist if symptoms continue.",
+        confidence,
+        confidence_percentage: (confidence * 100).toFixed(2),
+        observedSigns: Array.isArray(predictionData.observedSigns)
+          ? predictionData.observedSigns
+          : [],
+        advice: predictionData.advice,
+        urgency: predictionData.urgency,
         medicines: Array.isArray(predictionData.medicines)
           ? predictionData.medicines
           : [],
+        medicineTiming: Array.isArray(predictionData.medicineTiming)
+          ? predictionData.medicineTiming
+          : [],
+        whenToSeeDoctor: predictionData.whenToSeeDoctor,
         disclaimer:
           predictionData.disclaimer ||
-          "AI guidance is informational only and not a medical diagnosis.",
+          "This is educational information, not a medical diagnosis or prescription.",
       },
       message: "Prediction successful",
     });
@@ -81,13 +144,15 @@ const getPrediction = async (req, res) => {
     console.error("AI prediction failed:", error.message);
 
     if (error.response) {
-      console.error("Prediction API status:", error.response.status);
-      console.error("Prediction API body:", error.response.data);
+      console.error("Gemini API status:", error.response.status);
+      console.error("Gemini API body:", error.response.data);
 
-      return res.status(error.response.status || 502).json({
+      return res.status(error.response.status === 429 ? 503 : 502).json({
         success: false,
-        message: "Error from prediction API",
-        error: error.response.data?.message || error.message,
+        message: "Gemini could not analyze this image",
+        error:
+          error.response.data?.error?.message ||
+          "Please try again in a moment.",
       });
     }
 
@@ -100,7 +165,7 @@ const getPrediction = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: "Failed to get prediction",
+      message: "Failed to analyze image",
       error: error.message,
     });
   } finally {

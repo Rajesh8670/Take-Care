@@ -64,6 +64,7 @@ const AIDoctor = () => {
         `Advice:\n${data.advice}\n\n` +
         `Recommended management:\n${medicines}\n\n` +
         `Disclaimer: ${data.disclaimer}`,
+        analysis: data,
     };
   };
 
@@ -255,7 +256,53 @@ const AIDoctor = () => {
                       className="mb-2 rounded-lg max-h-48"
                     />
                   )}
-                  <p className="whitespace-pre-line">{msg.text}</p>
+                  {msg.analysis ? (
+                    <div className="space-y-4 min-w-[min(70vw,420px)]">
+                      <div>
+                        <p className="text-xs uppercase tracking-wide opacity-70">Possible concern</p>
+                        <p className="text-lg font-bold">{msg.analysis.prediction}</p>
+                        <p className="text-sm opacity-80">
+                          Confidence: {msg.analysis.confidence_percentage}%
+                        </p>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-xl bg-blue-50 p-3 text-gray-800 dark:bg-gray-800 dark:text-gray-100">
+                          <p className="text-xs font-semibold uppercase text-blue-600 dark:text-blue-300">What was noticed</p>
+                          <ul className="mt-1 list-disc pl-4 text-sm">
+                            {(msg.analysis.observedSigns || []).map((sign) => <li key={sign}>{sign}</li>)}
+                          </ul>
+                        </div>
+                        <div className="rounded-xl bg-amber-50 p-3 text-gray-800 dark:bg-gray-800 dark:text-gray-100">
+                          <p className="text-xs font-semibold uppercase text-amber-700 dark:text-amber-300">Urgency</p>
+                          <p className="mt-1 text-sm">{msg.analysis.urgency}</p>
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl bg-emerald-50 p-3 text-gray-800 dark:bg-gray-800 dark:text-gray-100">
+                        <p className="text-xs font-semibold uppercase text-emerald-700 dark:text-emerald-300">Care and treatment guidance</p>
+                        <p className="mt-1 text-sm">{msg.analysis.advice}</p>
+                        {msg.analysis.medicines?.length > 0 && (
+                          <>
+                            <p className="mt-3 text-sm font-semibold">Possible products</p>
+                            <ul className="list-disc pl-4 text-sm">
+                              {msg.analysis.medicines.map((medicine) => <li key={medicine}>{medicine}</li>)}
+                            </ul>
+                            <p className="mt-2 text-sm"><strong>When/how:</strong> {msg.analysis.medicineTiming?.join(" ")}</p>
+                          </>
+                        )}
+                      </div>
+
+                      <div className="rounded-xl bg-rose-50 p-3 text-gray-800 dark:bg-gray-800 dark:text-gray-100">
+                        <p className="text-xs font-semibold uppercase text-rose-700 dark:text-rose-300">See a doctor</p>
+                        <p className="mt-1 text-sm">{msg.analysis.whenToSeeDoctor}</p>
+                      </div>
+
+                      <p className="text-xs opacity-70">{msg.analysis.disclaimer}</p>
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-line">{msg.text}</p>
+                  )}
                   <span className="text-xs opacity-70 block mt-1">
                     {msg.time}
                   </span>
